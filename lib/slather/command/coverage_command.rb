@@ -19,6 +19,7 @@ class CoverageCommand < Clamp::Command
 
   option ["--build-directory", "-b"], "BUILD_DIRECTORY", "The directory where gcno files will be written to. Defaults to derived data."
   option ["--source-directory"], "SOURCE_DIRECTORY", "The directory where your source files are located."
+  option ["--original-source-directory"], "ORIGINAL_SOURCE_DIRECTORY", "The directory where sources files were located when binaries were built."
   option ["--output-directory"], "OUTPUT_DIRECTORY", "The directory where your Cobertura XML report will be written to."
   option ["--ignore", "-i"], "IGNORE", "ignore files conforming to a path", :multivalued => true
   option ["--verbose", "-v"], :flag, "Enable verbose mode"
@@ -40,6 +41,7 @@ class CoverageCommand < Clamp::Command
     setup_ignore_list
     setup_build_directory
     setup_source_directory
+    setup_original_source_directory
     setup_output_directory
     setup_coverage_service
     setup_verbose_mode
@@ -66,6 +68,10 @@ class CoverageCommand < Clamp::Command
 
   def setup_source_directory
     project.source_directory = source_directory if source_directory
+  end
+
+  def setup_original_source_directory
+    project.original_source_directory = original_source_directory if original_source_directory
   end
 
   def setup_output_directory

@@ -43,7 +43,7 @@ end
 module Slather
   class Project < Xcodeproj::Project
 
-    attr_accessor :build_directory, :ignore_list, :ci_service, :coverage_service, :coverage_access_token, :source_directory,
+    attr_accessor :build_directory, :ignore_list, :ci_service, :coverage_service, :coverage_access_token, :source_directory, :original_source_directory,
       :output_directory, :xcodeproj, :show_html, :verbose_mode, :input_format, :scheme, :workspace, :binary_file, :binary_basename, :arch, :source_files,
       :decimals, :llvm_version, :configuration
 
@@ -92,6 +92,23 @@ module Slather
       derived_data_path
     end
     private :derived_data_path
+
+    def llvm_cov_path
+      # Support for -path-equivalence was added to llvm-cov in https://github.com/llvm-mirror/llvm/commit/8574d59a97c4296279b37de66ba392671c598464
+      # As the time of writing these changes are neither included in the latest Xcode release (9.0) nor in the latest LLVM release (5.0.0).
+      # So, to use Slather against moved source directory, user should provide a version of llvm-cov built from sources.
+      # Once updated version of llvm-cov is released as a part of Xcode, this can be deprecated and removed.
+      custom_llvm_cov_path = ENV["SLATHER_LLVM_COV"]
+      if custom_llvm_cov_path
+        return [custom_llvm_cov_path]
+      end
+      return ["xcrun", "llvm-cov"]
+    end
+
+    def run_llvm_cov(args)
+      command = (self.llvm_cov_path + args).shelljoin
+      return `#{command}`
+    end
 
     def coverage_files
       if self.input_format == "profdata"
@@ -211,11 +228,15 @@ module Slather
         raise StandardError, "No binary file found."
       end
 
-      llvm_cov_args = %W(show -instr-profile #{profdata_file_arg} #{binary_path})
+      llvm_cov_args = ["show", "-instr-profile", profdata_file_arg]
       if self.arch
         llvm_cov_args << "--arch" << self.arch
       end
-      `xcrun llvm-cov #{llvm_cov_args.shelljoin} #{source_files.shelljoin}`
+      if self.original_source_directory && self.source_directory
+        llvm_cov_args << "-path-equivalence=#{self.original_source_directory},#{self.source_directory}"
+      end
+      llvm_cov_args << binary_path
+      return self.run_llvm_cov(llvm_cov_args + source_files)
     end
     private :unsafe_profdata_llvm_cov_output
 
@@ -249,13 +270,14 @@ module Slather
         configure_coverage_access_token
         configure_coverage_service
         configure_source_directory
+        configure_original_source_directory
         configure_output_directory
         configure_input_format
         configure_binary_file
         configure_arch
         configure_decimals
 
-        self.llvm_version = `xcrun llvm-cov --version`.match(/LLVM version ([\d\.]+)/).captures[0]
+        self.llvm_version = self.run_llvm_cov(["--version"]).match(/LLVM version ([\d\.]+)/).captures[0]
       rescue => e
         puts e.message
         puts failure_help_string
@@ -283,6 +305,10 @@ module Slather
 
     def configure_source_directory
       self.source_directory ||= self.class.yml["source_directory"] if self.class.yml["source_directory"]
+    end
+
+    def configure_original_source_directory
+      self.original_source_directory ||= self.class.yml["original_source_directory"] if self.class.yml["original_source_directory"]
     end
 
     def configure_output_directory

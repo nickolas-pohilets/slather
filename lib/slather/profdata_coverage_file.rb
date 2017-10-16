@@ -35,6 +35,10 @@ module Slather
         if path_on_first_line?
           path = self.source.split("\n")[0].sub ":", ""
           path &&= Pathname(path)
+          if project.original_source_directory && project.source_directory
+            rel_path = path.relative_path_from(Pathname.new project.original_source_directory)
+            path = (Pathname.new(project.source_directory) + rel_path).cleanpath
+          end
         else
           # llvm-cov was run with just one matching source file
           # It doesn't print the source path in this case, so we have to find it ourselves
