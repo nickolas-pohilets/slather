@@ -127,7 +127,7 @@ module Slather
     end
 
     def line_coverage_data
-      source_code_lines.map do |line|
+      @line_coverage_data ||= source_code_lines.map do |line|
         coverage_for_line(line, self.line_numbers_first)
       end
     end
