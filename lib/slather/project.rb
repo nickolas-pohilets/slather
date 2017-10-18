@@ -277,7 +277,13 @@ module Slather
         configure_arch
         configure_decimals
 
-        self.llvm_version = self.run_llvm_cov(["--version"]).match(/LLVM version ([\d\.]+)/).captures[0]
+        llvm_version = self.run_llvm_cov(["--version"])
+        m = llvm_version.match(/Apple LLVM version ([\d\.]+)/)
+        if m
+          self.llvm_version = m.captures[0]
+        else
+          self.llvm_version = '10.0.0'
+        end
       rescue => e
         puts e.message
         puts failure_help_string
