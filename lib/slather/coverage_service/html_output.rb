@@ -60,6 +60,7 @@ module Slather
 
         reports.each do |name, doc|
           html_file = File.join(directory_path, "#{name}.html")
+          FileUtils.mkdir_p(File.dirname(html_file))
           File.write(html_file, doc.to_html)
         end
       end
@@ -101,8 +102,10 @@ module Slather
 
             cov.tbody(:class => "list") {
               coverage_files.each { |coverage_file|
-                filename = File.basename(coverage_file.source_file_pathname_relative_to_repo_root)
-                filename_link = CGI.escape(filename) + ".html"
+                filepath = coverage_file.source_file_pathname_relative_to_repo_root
+                filename = File.basename(filepath)
+                filepath = filepath.to_s
+                filename_link = CGI.escape(filepath) + ".html"
 
                 cov.tr {
                   percentage = coverage_file.percentage_lines_tested
@@ -132,6 +135,7 @@ module Slather
       def create_html_from_file(coverage_file)
         filepath = coverage_file.source_file_pathname_relative_to_repo_root
         filename = File.basename(filepath)
+        filepath = filepath.to_s
         percentage = coverage_file.percentage_lines_tested
 
         cleaned_gcov_lines = coverage_file.cleaned_gcov_data.split("\n")
@@ -180,7 +184,7 @@ module Slather
           }
         }
 
-        @docs[filename] = builder.doc
+        @docs[filepath] = builder.doc
       end
 
       def generate_html_template(title, is_index, is_file_empty)

@@ -71,7 +71,7 @@ module Slather
     end
 
     def source_file_pathname_relative_to_repo_root
-      source_file_pathname.realpath.relative_path_from(Pathname("./").realpath)
+      source_file_pathname.realpath.relative_path_from(Pathname(self.project.source_directory).realpath)
     end
 
     def ignored?
